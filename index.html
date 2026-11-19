@@ -1,0 +1,909 @@
+<!doctype html>
+<html lang="zh-Hant">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>長照服務平台</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=LXGW+WenKai+TC:wght@400;700&family=Noto+Sans+TC:wght@400;500;700&display=swap" rel="stylesheet">
+<style>
+:root {
+  --paper: #f6efe2;
+  --paper-light: #fffbf3;
+  --ink: #1e2e28;
+  --ink-soft: #52625a;
+  --pine: #24493d;
+  --moss: #557259;
+  --hill-far: #c9d3b4;
+  --hill-near: #93ab8b;
+  --persimmon: #e0662f;
+  --persimmon-deep: #b9451a;
+  --line: #d9cdb7;
+  --ok: #2b7a4b;
+  --ok-soft: #cfe6d2;
+  --danger: #a3301a;
+
+  --font-display: "LXGW WenKai TC", "Kaiti TC", "PingFang TC", serif;
+  --font-body: "Noto Sans TC", "PingFang TC", "Microsoft JhengHei", sans-serif;
+
+  --gutter: clamp(16px, 4vw, 48px);
+  --radius: 18px;
+  --knob: 56px;
+  --ease: cubic-bezier(.22, .8, .24, 1);
+}
+
+* { box-sizing: border-box; }
+html { -webkit-text-size-adjust: 100%; }
+body {
+  margin: 0;
+  background: var(--paper);
+  color: var(--ink);
+  font: 400 18px/1.6 var(--font-body);
+  overflow-x: hidden;
+}
+h1, h2, p { margin: 0; }
+a { color: inherit; text-decoration: none; }
+button, input { font: inherit; color: inherit; }
+:focus-visible { outline: 3px solid var(--persimmon-deep); outline-offset: 3px; }
+h1:focus { outline: none; }
+
+/* 背景：太陽隨流程在山丘上移動 */
+.scene { position: fixed; inset: 0; z-index: 0; overflow: hidden; pointer-events: none; }
+.sun {
+  position: absolute; right: 0; bottom: 0;
+  width: 60vmin; height: 60vmin;
+  border-radius: 50%;
+  background: var(--persimmon);
+  transition: transform 1s var(--ease);
+}
+body[data-screen="home"]  .sun { transform: translate(3vw, -15vh); }
+body[data-screen="roles"] .sun { transform: translate(10vw, -18vh) scale(.5); }
+body[data-screen="login"] .sun { transform: translate(-60vw, -2vh) scale(.82); }
+body[data-screen="app"]   .sun { transform: translate(24vw, 75vh) scale(.5); }
+.hill { position: absolute; left: 0; bottom: 0; width: 100%; height: 34vh; transition: transform 1s var(--ease); }
+.hill-far  { fill: var(--hill-far); }
+.hill-near { fill: var(--hill-near); height: 24vh; }
+body[data-screen="app"] .hill { transform: translateY(40%); }
+
+#view {
+  position: relative; z-index: 1;
+  min-height: 100dvh;
+  display: flex; flex-direction: column;
+  padding: var(--gutter);
+  padding-bottom: max(var(--gutter), env(safe-area-inset-bottom));
+}
+
+.rise { animation: rise .6s var(--ease) both; animation-delay: calc(var(--i, 0) * 70ms); }
+@keyframes rise { from { opacity: 0; transform: translateY(14px); } }
+
+/* 公司 logo 佔位印章 */
+.seal {
+  display: grid; place-items: center;
+  width: 64px; height: 64px;
+  border: 2.5px solid var(--persimmon-deep);
+  border-radius: 12px;
+  color: var(--persimmon-deep);
+  font: 700 15px/1.15 var(--font-display);
+  text-align: center;
+  flex: none;
+}
+
+.topbar { display: flex; align-items: center; justify-content: space-between; gap: 16px; min-height: 64px; }
+.back {
+  display: inline-flex; align-items: center; gap: 8px;
+  min-height: 52px; padding: 0 20px 0 14px;
+  border-radius: 999px;
+  background: var(--paper-light);
+  border: 1.5px solid var(--line);
+  font-weight: 500;
+  transition: border-color .2s, background .2s;
+}
+.back:hover { border-color: var(--pine); }
+.back svg { width: 22px; height: 22px; }
+
+.btn {
+  display: inline-flex; align-items: center; justify-content: center; gap: 12px;
+  min-height: 64px; padding: 0 36px;
+  border: 0; border-radius: 999px;
+  background: var(--pine); color: var(--paper-light);
+  font-size: 21px; font-weight: 700;
+  cursor: pointer;
+  transition: background .2s, transform .2s var(--ease);
+}
+.btn:hover { background: #18352c; }
+.btn:active { transform: scale(.98); }
+.btn svg { width: 24px; height: 24px; }
+
+svg.i { fill: none; stroke: currentColor; stroke-width: 1.8; stroke-linecap: round; stroke-linejoin: round; }
+
+/* 首頁 */
+.home { flex: 1; display: flex; flex-direction: column; }
+.home-body { margin-block: auto; padding-block: 40px 22vh; max-width: 620px; }
+.eyebrow { color: var(--persimmon-deep); font-weight: 700; letter-spacing: .24em; }
+.home h1 {
+  margin: 10px 0 18px;
+  font: 700 clamp(46px, 7.4vw, 92px)/1.12 var(--font-display);
+}
+.home p.lede { font-size: 21px; color: var(--ink-soft); margin-bottom: 36px; }
+
+/* 身份選擇 */
+.roles { flex: 1; display: flex; flex-direction: column; max-width: 860px; }
+.roles h1 { font: 700 clamp(36px, 5.6vw, 60px)/1.2 var(--font-display); margin-top: 28px; }
+.role-list { list-style: none; margin: 28px 0 auto; padding: 0; border-top: 2px solid var(--ink); }
+.role-link {
+  display: flex; align-items: center; justify-content: space-between; gap: 20px;
+  min-height: 112px; padding: 14px 8px;
+  border-bottom: 1.5px solid var(--line);
+  transition: padding .3s var(--ease), color .2s;
+}
+.role-link strong { display: block; font: 700 clamp(30px, 4.4vw, 44px)/1.25 var(--font-display); }
+.role-link span.hint { color: var(--ink-soft); }
+.role-link svg { width: 34px; height: 34px; flex: none; }
+.role-link:hover { padding-left: 22px; color: var(--persimmon-deep); }
+
+/* 登入 */
+.login {
+  flex: 1;
+  display: grid; grid-template-columns: 1fr minmax(0, 480px);
+  gap: clamp(24px, 5vw, 72px);
+  align-items: center;
+  padding-top: 24px;
+}
+.login-side { align-self: start; padding-top: 4vh; }
+.login-side h1 { font: 700 clamp(44px, 7vw, 76px)/1.15 var(--font-display); margin-top: 8px; }
+.login-side p { color: var(--ink-soft); margin-top: 10px; }
+.card {
+  background: var(--paper-light);
+  border: 1.5px solid var(--line);
+  border-radius: 26px;
+  padding: clamp(22px, 3.4vw, 36px);
+  box-shadow: 0 22px 44px -28px rgba(30, 46, 40, .55);
+}
+.avatar {
+  display: grid; place-items: center;
+  width: 84px; height: 84px; margin: 0 auto 20px;
+  border-radius: 50%;
+  background: var(--pine); color: var(--paper-light);
+}
+.avatar svg { width: 46px; height: 46px; }
+.field { display: block; margin-bottom: 14px; }
+.field span { display: block; font-weight: 500; margin-bottom: 4px; }
+.field input {
+  width: 100%; height: 58px; padding: 0 16px;
+  background: #fff;
+  border: 1.5px solid var(--line); border-radius: 14px;
+  font-size: 19px;
+}
+.field input:focus { border-color: var(--pine); }
+.field input[aria-invalid="true"] { border-color: var(--danger); }
+.remember {
+  display: inline-flex; align-items: center; gap: 10px;
+  min-height: 44px; margin-bottom: 8px; cursor: pointer;
+}
+.remember input { width: 24px; height: 24px; margin: 0; accent-color: var(--pine); }
+
+/* 滑塊驗證 */
+.verify {
+  --x: 0px;
+  position: relative;
+  height: 64px; border-radius: 999px;
+  background: #ece3d1;
+  overflow: hidden;
+  touch-action: none; user-select: none; -webkit-user-select: none;
+}
+.verify-fill {
+  position: absolute; inset: 0 auto 0 0;
+  width: calc(var(--x) + 4px + var(--knob) / 2);
+  background: var(--ok-soft);
+}
+.verify-text {
+  position: absolute; inset: 0;
+  display: grid; place-items: center;
+  padding-left: var(--knob);
+  color: var(--ink-soft); font-weight: 500;
+}
+.verify-knob {
+  position: absolute; top: 4px; left: 4px;
+  display: grid; place-items: center;
+  width: var(--knob); height: var(--knob);
+  border-radius: 50%;
+  background: var(--persimmon-deep); color: #fff;
+  transform: translateX(var(--x));
+  cursor: grab;
+}
+.verify-knob:focus-visible { outline-offset: -6px; outline-color: #fff; }
+.verify-knob svg { width: 26px; height: 26px; }
+.verify.dragging .verify-knob { cursor: grabbing; }
+.verify.returning .verify-knob { transition: transform .35s var(--ease); }
+.verify.returning .verify-fill { transition: width .35s var(--ease); }
+.verify[data-done] .verify-fill { width: 100%; }
+.verify[data-done] .verify-text { color: var(--ok); font-weight: 700; }
+.verify[data-done] .verify-knob {
+  left: auto; right: 4px; transform: none;
+  background: var(--ok); cursor: default;
+  animation: stamp .4s var(--ease);
+}
+@keyframes stamp { 0% { scale: 1.35; } 100% { scale: 1; } }
+
+.form-error { min-height: 28px; margin: 8px 0; color: var(--danger); font-weight: 500; font-size: 17px; }
+.btn-login { width: 100%; }
+form:not([data-verified]) .btn-login { background: var(--moss); }
+.demo-note { margin-top: 12px; color: var(--ink-soft); font-size: 15px; text-align: center; }
+
+/* 功能頁 */
+.app-head { margin: 22px 0 18px; }
+.app-head h1 { font: 700 clamp(32px, 4.6vw, 48px)/1.2 var(--font-display); }
+.tiles {
+  flex: 1;
+  display: grid; grid-template-columns: 1fr 1fr;
+  grid-auto-rows: minmax(200px, 1fr);
+  gap: clamp(12px, 2vw, 22px);
+}
+.tile-wrap { position: relative; display: grid; }
+.tile-wrap.open { z-index: 2; }
+.tile {
+  display: flex; flex-direction: column; justify-content: space-between;
+  width: 100%; padding: clamp(16px, 2.6vw, 30px);
+  text-align: left;
+  background: var(--paper-light);
+  border: 1.5px solid var(--line); border-radius: var(--radius);
+  cursor: pointer;
+  transition: background .25s, color .25s, border-color .25s;
+}
+.tile:hover, .open > .tile { background: var(--pine); border-color: var(--pine); color: var(--paper-light); }
+.tile-icon { width: clamp(40px, 5vw, 56px); height: clamp(40px, 5vw, 56px); }
+.tile-foot { display: flex; align-items: flex-end; justify-content: space-between; gap: 10px; }
+.tile-title { font: 700 clamp(25px, 4.2vw, 44px)/1.2 var(--font-display); }
+.tile-tag { display: block; font: 500 15px/1.4 var(--font-body); opacity: .75; }
+.tile-mark { width: 30px; height: 30px; flex: none; transition: transform .3s var(--ease); }
+.open .tile-mark { transform: rotate(45deg); }
+.submenu {
+  position: absolute; top: 12px; right: 12px;
+  width: min(280px, calc(100% - 24px));
+  padding: 6px;
+  background: var(--paper-light); color: var(--ink);
+  border-radius: 14px;
+  box-shadow: 0 16px 32px -14px rgba(0, 0, 0, .55);
+  animation: rise .22s var(--ease) both;
+}
+.submenu[hidden] { display: none; }
+.submenu a {
+  display: flex; align-items: center; min-height: 54px; padding: 0 14px;
+  border-radius: 10px; font-weight: 500;
+}
+.submenu a:hover { background: var(--ok-soft); }
+
+.empty {
+  flex: 1; display: flex; flex-direction: column; align-items: flex-start; justify-content: center;
+  max-width: 620px; padding-bottom: 20vh;
+}
+.empty h1 { font: 700 clamp(40px, 6.4vw, 68px)/1.2 var(--font-display); margin: 8px 0 12px; }
+.empty p.note { color: var(--ink-soft); margin-bottom: 28px; }
+
+/* 照護問答 */
+.sr-only { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); white-space: nowrap; }
+.ask { flex: 1; display: flex; flex-direction: column; width: 100%; max-width: 860px; margin-inline: auto; }
+.ask-sub { color: var(--ink-soft); margin-top: 4px; }
+.thread { flex: 1; display: flex; flex-direction: column; gap: 22px; padding-bottom: 20px; }
+.samples { display: grid; gap: 10px; }
+.sample {
+  min-height: 56px; padding: 12px 18px;
+  text-align: left; line-height: 1.45;
+  background: var(--paper-light);
+  border: 1.5px solid var(--line); border-radius: 14px;
+  cursor: pointer;
+  transition: border-color .2s;
+}
+.sample:hover { border-color: var(--pine); }
+.turn-q {
+  width: fit-content; max-width: 88%; margin-left: auto;
+  padding: 12px 18px;
+  background: var(--pine); color: var(--paper-light);
+  border-radius: 18px 18px 4px 18px;
+}
+.turn-a {
+  margin-top: 12px; padding: clamp(16px, 2.6vw, 26px);
+  background: var(--paper-light);
+  border: 1.5px solid var(--line); border-radius: 18px;
+}
+.loading { color: var(--ink-soft); font-weight: 500; }
+.loading span::after { content: "…"; animation: blink 1.1s infinite; }
+@keyframes blink { 50% { opacity: .2; } }
+.steps { margin: 0; padding-left: 1.4em; display: grid; gap: 10px; }
+.cite {
+  min-width: 30px; height: 30px; margin-left: 4px;
+  border: 0; border-radius: 8px;
+  background: var(--ok-soft); color: var(--pine);
+  font-size: 15px; font-weight: 700;
+  cursor: pointer;
+}
+.sources { margin-top: 18px; padding-top: 14px; border-top: 1.5px solid var(--line); }
+.sources h2 { font: 700 20px/1.4 var(--font-display); margin-bottom: 6px; }
+.source > summary {
+  display: flex; align-items: center; gap: 10px;
+  min-height: 48px; cursor: pointer; font-weight: 500;
+}
+.source > summary b {
+  flex: none; display: grid; place-items: center;
+  width: 28px; height: 28px;
+  border-radius: 8px;
+  background: var(--ok-soft); color: var(--pine); font-size: 15px;
+}
+.source-body { padding: 2px 0 14px 38px; }
+.source-meta { color: var(--ink-soft); font-size: 16px; }
+.source-body blockquote {
+  margin: 8px 0; padding: 4px 0 4px 14px;
+  border-left: 3px solid var(--persimmon-deep);
+}
+.excerpt summary { min-height: 40px; color: var(--ink-soft); cursor: pointer; font-size: 16px; }
+.excerpt p { white-space: pre-wrap; font-size: 16px; color: var(--ink-soft); }
+.source-link { display: inline-block; padding-block: 8px; color: var(--pine); font-weight: 700; text-decoration: underline; }
+.notice { font-weight: 500; }
+.notice[data-kind="no_answer"] { color: #7a5200; }
+.notice[data-kind="medication"], .notice[data-kind="emergency"], .notice[data-kind="error"] { color: var(--danger); font-weight: 700; }
+.retry {
+  display: block; min-height: 48px; margin-top: 10px; padding: 0 20px;
+  background: transparent; color: var(--ink);
+  border: 1.5px solid var(--line); border-radius: 999px;
+  cursor: pointer;
+}
+.composer {
+  position: sticky; bottom: max(10px, env(safe-area-inset-bottom));
+  display: flex; align-items: flex-end; gap: 8px;
+  padding: 10px;
+  background: var(--paper-light);
+  border: 1.5px solid var(--pine); border-radius: 22px;
+}
+.composer textarea {
+  flex: 1; min-width: 0; min-height: 56px; padding: 12px;
+  border: 0; background: transparent; resize: none;
+  line-height: 1.5;
+}
+.composer textarea:focus { outline: none; }
+.composer:focus-within { outline: 3px solid var(--persimmon-deep); outline-offset: 2px; }
+.mic {
+  flex: none; display: grid; place-items: center;
+  width: 56px; height: 56px;
+  background: transparent;
+  border: 1.5px solid var(--line); border-radius: 50%;
+  cursor: pointer;
+}
+.mic[hidden] { display: none; }
+.mic svg { width: 26px; height: 26px; }
+.mic[aria-pressed="true"] { background: var(--persimmon-deep); border-color: var(--persimmon-deep); color: #fff; }
+.btn-send { min-height: 56px; padding: 0 26px; flex: none; }
+.btn-send:disabled { background: var(--moss); cursor: wait; }
+.voice-note { min-height: 26px; margin-top: 4px; color: var(--ink-soft); font-size: 16px; }
+
+@media (max-width: 1000px) {
+  body[data-screen="home"] .sun,
+  body[data-screen="roles"] .sun { transform: translate(10vmin, calc(30vmin - 30vh)) scale(.5); }
+}
+
+@media (max-width: 760px) {
+  .login { grid-template-columns: 1fr; padding-top: 12px; }
+  .login-side { padding-top: 0; }
+  body[data-screen="login"] .sun { transform: translate(10vmin, calc(30vmin - 30vh)) scale(.5); }
+  .home-body { padding-block: 60px 26vh; }
+  .tile-mark { width: 24px; height: 24px; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after { animation: none !important; transition: none !important; }
+}
+</style>
+</head>
+<body data-screen="home">
+
+<div class="scene" aria-hidden="true">
+  <div class="sun"></div>
+  <svg class="hill hill-far" viewBox="0 0 1200 300" preserveAspectRatio="none"><path d="M0 170C180 70 340 60 520 140s330 110 680-40v200H0z"/></svg>
+  <svg class="hill hill-near" viewBox="0 0 1200 300" preserveAspectRatio="none"><path d="M0 120c220 110 430 130 640 70s370-100 560-30v140H0z"/></svg>
+</div>
+
+<main id="view"></main>
+
+<script>
+const ICONS = {
+  back: '<path d="M15 5l-7 7 7 7"/>',
+  mic: '<rect x="9" y="3" width="6" height="11" rx="3"/><path d="M5.500 11.500a6.500 6.500 0 0013 0M12 18v3"/>',
+  arrow: '<path d="M4 12h15M13 6l6 6-6 6"/>',
+  plus: '<path d="M12 5v14M5 12h14"/>',
+  check: '<path d="M5 13l4.5 4.5L19 7.5"/>',
+  chevrons: '<path d="M6 6l6 6-6 6M13 6l6 6-6 6"/>',
+  user: '<circle cx="12" cy="8.5" r="4"/><path d="M4.5 20.5c1-4 4-6 7.5-6s6.500 2 7.500 6"/>',
+  people: '<circle cx="9" cy="8.500" r="3.500"/><path d="M2.500 20c.7-3.700 3.200-5.500 6.500-5.500s5.800 1.800 6.500 5.500M15.500 5.300a3.500 3.500 0 010 6.400M18 14.800c2 .8 3.100 2.500 3.500 5.200"/>',
+  feedback: '<path d="M4 5.500h16v11H10l-4.500 3.500v-3.500H4z"/><path d="M8.500 9.500h7M8.500 12.500h4.500"/>',
+  clipboard: '<rect x="5" y="4.500" width="14" height="16.500" rx="2"/><path d="M9 4.500V3h6v1.500M8.500 11l1.500 1.500 2.500-3M8.500 16.500h7"/>',
+  dialog: '<path d="M3.500 6h12v8.500H8l-3 2.500v-2.500H3.500z"/><path d="M18.500 9.500h2v8h-1.500V20l-3-2.500H10"/>',
+  book: '<path d="M12 6.500C10 4.800 7 4.500 3.500 5v14c3.500-.5 6.500-.2 8.500 1.500 2-1.700 5-2 8.500-1.500V5C17 4.500 14 4.800 12 6.500zM12 6.500v14"/>',
+  route: '<circle cx="6" cy="18.500" r="2.500"/><circle cx="18" cy="5.500" r="2.500"/><path d="M8.500 18.500H16a3.250 3.250 0 000-6.500H8a3.250 3.250 0 010-6.500h7.500"/>',
+};
+const icon = (name, cls = '') =>
+  `<svg class="i ${cls}" viewBox="0 0 24 24" aria-hidden="true">${ICONS[name]}</svg>`;
+
+const ROLES = {
+  company: {
+    label: '公司登入', name: '公司端', hint: '人員、考核與回饋管理',
+    tiles: [
+      { id: 'staff', title: '人員管理', icon: 'people' },
+      { id: 'feedback', title: '意見回饋', icon: 'feedback', menu: [
+        { id: 'feedback-mechanism', title: '回饋機制' },
+        { id: 'qa', title: 'Q&A專區' },
+      ] },
+      { id: 'review', title: '考核專區', icon: 'clipboard' },
+      { id: 'dialog', title: '對話專區', icon: 'dialog', menu: [
+        { id: 'ai-chat', title: 'AI對話網站' },
+        { id: 'analytics', title: '數據分析' },
+      ] },
+    ],
+  },
+  employee: {
+    label: '員工登入', name: '員工端', hint: '練習與里程紀錄',
+    tiles: [
+      { id: 'practice', title: '練習專區', icon: 'book' },
+      { id: 'mileage', title: '里程紀錄', icon: 'route' },
+      { id: 'ask', title: '照護問答', icon: 'dialog' },
+      { id: 'practice-3', title: '練習專區', icon: 'book', tag: '預留' },
+    ],
+  },
+  caregiver: { label: '照顧者登入', name: '照顧者端', hint: '照顧者專屬入口', tiles: [] },
+};
+
+function findPage(role, id) {
+  return ROLES[role].tiles.flatMap(t => [t, ...(t.menu || [])]).find(p => p.id === id && !p.menu);
+}
+
+// 瀏覽器儲存可能被封鎖；失敗時略過，頁面仍可運作
+const store = {
+  get(area, key) { try { return window[area].getItem(key); } catch { return null; } },
+  set(area, key, value) { try { window[area].setItem(key, value); } catch {} },
+  remove(area, key) { try { window[area].removeItem(key); } catch {} },
+};
+const AUTH_KEY = 'care.auth';
+const rememberKey = role => `care.remember.${role}`;
+
+const view = document.getElementById('view');
+const go = hash => { location.hash = hash; };
+
+const backLink = (href, text) => `<a class="back" href="${href}">${icon('back')}${text}</a>`;
+const topbar = (href, text) => `<header class="topbar rise">${backLink(href, text)}<div class="seal" aria-label="公司 logo">公司<br>LOGO</div></header>`;
+
+const screens = {
+  home: () => `
+    <div class="home">
+      <div class="seal rise" aria-label="公司 logo">公司<br>LOGO</div>
+      <div class="home-body">
+        <p class="eyebrow rise" style="--i:1">首頁</p>
+        <h1 class="rise" style="--i:2" tabindex="-1">歡迎使用<br>長照服務平台</h1>
+        <p class="lede rise" style="--i:3">公司、員工與照顧者的共同入口。</p>
+        <a class="btn rise" style="--i:4" href="#/roles">點此進入${icon('arrow')}</a>
+      </div>
+    </div>`,
+
+  roles: () => `
+    ${topbar('#/', '返回首頁')}
+    <div class="roles">
+      <h1 class="rise" style="--i:1" tabindex="-1">請選擇登入身份</h1>
+      <ul class="role-list">
+        ${Object.entries(ROLES).map(([key, r], i) => `
+          <li class="rise" style="--i:${i + 2}">
+            <a class="role-link" href="#/login/${key}">
+              <div><strong>${r.label}</strong><span class="hint">${r.hint}</span></div>
+              ${icon('arrow')}
+            </a>
+          </li>`).join('')}
+      </ul>
+    </div>`,
+
+  login: role => `
+    ${topbar('#/roles', '返回身份選擇')}
+    <div class="login">
+      <div class="login-side">
+        <p class="eyebrow rise" style="--i:1">${ROLES[role].name}</p>
+        <h1 class="rise" style="--i:2" tabindex="-1">${ROLES[role].label}</h1>
+      </div>
+      <form class="card rise" style="--i:3" novalidate>
+        <div class="avatar">${icon('user')}</div>
+        <label class="field"><span>Username</span><input name="username" autocomplete="username" autocapitalize="none" spellcheck="false"></label>
+        <label class="field"><span>Password</span><input name="password" type="password" autocomplete="current-password"></label>
+        <label class="remember"><input type="checkbox" name="remember">Remember me</label>
+        <div class="verify">
+          <div class="verify-fill"></div>
+          <div class="verify-text" aria-live="polite">按住圓鈕，向右滑到底</div>
+          <div class="verify-knob" role="slider" tabindex="0" aria-label="滑塊安全驗證" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0">${icon('chevrons')}</div>
+        </div>
+        <p class="form-error" role="alert"></p>
+        <button class="btn btn-login" type="submit">Login</button>
+        <p class="demo-note">原型展示：尚未串接帳號系統，輸入任意帳密即可登入。</p>
+      </form>
+    </div>`,
+
+  app: role => {
+    const r = ROLES[role];
+    if (!r.tiles.length) return emptyPage('#/roles', '返回身份選擇', r.name, '專屬功能頁', '照顧者端的功能頁面尚未規劃，目前只開放登入流程。');
+    return `
+      ${topbar('#/roles', '返回身份選擇')}
+      <div class="app-head rise" style="--i:1"><h1 tabindex="-1">${r.name}功能頁面</h1></div>
+      <div class="tiles">
+        ${r.tiles.map((t, i) => tile(role, t, i)).join('')}
+      </div>`;
+  },
+
+  page: (role, id) => {
+    if (id === 'ask') return askScreen(role);
+    const p = findPage(role, id);
+    return emptyPage(`#/app/${role}`, '返回功能頁', ROLES[role].name, p.title, p.tag ? '這是預留位置，功能內容待確認。' : '此頁面內容待建置。');
+  },
+};
+
+function emptyPage(href, text, eyebrow, title, note) {
+  return `
+    ${topbar(href, text)}
+    <div class="empty">
+      <p class="eyebrow rise" style="--i:1">${eyebrow}</p>
+      <h1 class="rise" style="--i:2" tabindex="-1">${title}</h1>
+      <p class="note rise" style="--i:3">${note}</p>
+    </div>`;
+}
+
+function tile(role, t, i) {
+  const inner = `
+    ${icon(t.icon, 'tile-icon')}
+    <span class="tile-foot">
+      <span class="tile-title">${t.title}${t.tag ? `<span class="tile-tag">${t.tag}</span>` : ''}</span>
+      ${icon(t.menu ? 'plus' : 'arrow', 'tile-mark')}
+    </span>`;
+  if (!t.menu) {
+    return `<div class="tile-wrap rise" style="--i:${i + 2}"><a class="tile" href="#/app/${role}/${t.id}">${inner}</a></div>`;
+  }
+  return `
+    <div class="tile-wrap rise" style="--i:${i + 2}">
+      <button class="tile" type="button" aria-expanded="false" aria-controls="menu-${t.id}">${inner}</button>
+      <nav class="submenu" id="menu-${t.id}" aria-label="${t.title}" hidden>
+        ${t.menu.map(m => `<a href="#/app/${role}/${m.id}">${m.title}</a>`).join('')}
+      </nav>
+    </div>`;
+}
+
+function setupLogin(role) {
+  const form = view.querySelector('form');
+  const error = form.querySelector('.form-error');
+  const saved = store.get('localStorage', rememberKey(role));
+  if (saved) {
+    form.username.value = saved;
+    form.remember.checked = true;
+  }
+  const slider = setupSlider(form.querySelector('.verify'), () => {
+    form.dataset.verified = '';
+    error.textContent = '';
+  });
+
+  form.addEventListener('submit', event => {
+    event.preventDefault();
+    for (const input of [form.username, form.password]) {
+      const empty = !input.value.trim();
+      input.setAttribute('aria-invalid', empty);
+    }
+    const firstEmpty = [form.username, form.password].find(i => !i.value.trim());
+    if (firstEmpty) {
+      error.textContent = '請輸入帳號與密碼。';
+      firstEmpty.focus();
+      return;
+    }
+    if (!slider.done()) {
+      error.textContent = '請先完成滑塊驗證。';
+      return;
+    }
+    if (form.remember.checked) store.set('localStorage', rememberKey(role), form.username.value.trim());
+    else store.remove('localStorage', rememberKey(role));
+    store.set('sessionStorage', AUTH_KEY, role);
+    go(`#/app/${role}`);
+  });
+}
+
+function setupSlider(track, onDone) {
+  const knob = track.querySelector('.verify-knob');
+  const text = track.querySelector('.verify-text');
+  const INSET = 4;
+  let x = 0, startX = 0, startPointer = 0, dragging = false, done = false;
+
+  const maxX = () => track.clientWidth - knob.offsetWidth - INSET * 2;
+  const render = () => {
+    track.style.setProperty('--x', `${x}px`);
+    knob.setAttribute('aria-valuenow', Math.round((x / maxX()) * 100));
+  };
+  const complete = () => {
+    done = true;
+    dragging = false;
+    track.classList.remove('dragging', 'returning');
+    track.dataset.done = '';
+    knob.innerHTML = icon('check');
+    knob.setAttribute('aria-valuenow', 100);
+    knob.setAttribute('aria-disabled', 'true');
+    text.textContent = '驗證完成';
+    onDone();
+  };
+  const moveTo = value => {
+    x = Math.max(0, Math.min(maxX(), value));
+    render();
+    if (x >= maxX() - 2) complete();
+  };
+
+  knob.addEventListener('pointerdown', event => {
+    if (done) return;
+    dragging = true;
+    startX = x;
+    startPointer = event.clientX;
+    knob.setPointerCapture(event.pointerId);
+    track.classList.add('dragging');
+    track.classList.remove('returning');
+  });
+  knob.addEventListener('pointermove', event => {
+    if (dragging) moveTo(startX + event.clientX - startPointer);
+  });
+  const release = () => {
+    if (!dragging) return;
+    dragging = false;
+    track.classList.remove('dragging');
+    track.classList.add('returning');
+    x = 0;
+    render();
+  };
+  knob.addEventListener('pointerup', release);
+  knob.addEventListener('pointercancel', release);
+
+  knob.addEventListener('keydown', event => {
+    if (done) return;
+    const step = maxX() / 10;
+    const target = { ArrowRight: x + step, ArrowUp: x + step, ArrowLeft: x - step, ArrowDown: x - step, Home: 0, End: maxX() }[event.key];
+    if (target === undefined) return;
+    event.preventDefault();
+    track.classList.remove('returning');
+    moveTo(target);
+  });
+
+  return { done: () => done };
+}
+
+const SAMPLE_QUESTIONS = [
+  '腎臟病長輩有嚴格限水，管灌前後沖管的水要算在水份裡面嗎？沖多少？',
+  '長輩沒辦法自己下床，要怎麼幫他從床上移到輪椅？',
+  '協助長輩從輪椅轉移到馬桶上，腳步和姿勢要注意什麼？',
+  '失智長輩死都不肯洗澡，當下該怎麼辦？可以強制他洗嗎？',
+  '我應該給他吃什麼藥？',
+];
+
+const esc = value => String(value).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+
+function askScreen(role) {
+  return `
+    ${topbar(`#/app/${role}`, '返回功能頁')}
+    <div class="ask">
+      <div class="app-head rise" style="--i:1">
+        <h1 tabindex="-1">照護問答</h1>
+        <p class="ask-sub">只根據已收錄的文件回答，並附上來源；找不到依據時會直接告訴你。</p>
+      </div>
+      <div class="thread">
+        <div class="samples rise" style="--i:2">
+          ${SAMPLE_QUESTIONS.map(q => `<button class="sample" type="button">${esc(q)}</button>`).join('')}
+        </div>
+      </div>
+      <form class="composer">
+        <label class="sr-only" for="question">輸入問題</label>
+        <textarea id="question" rows="2" maxlength="300" placeholder="輸入照顧上遇到的問題"></textarea>
+        <button class="mic" type="button" aria-label="語音輸入" aria-pressed="false" hidden>${icon('mic')}</button>
+        <button class="btn btn-send" type="submit">送出</button>
+      </form>
+      <p class="voice-note" role="status"></p>
+    </div>`;
+}
+
+function renderSources(sources, turn) {
+  return `
+    <section class="sources">
+      <h2>引用來源</h2>
+      ${sources.map(s => `
+        <details class="source" id="src-${turn}-${s.n}">
+          <summary><b>${s.n}</b><span>${esc(s.title)}｜${esc(s.location)}</span></summary>
+          <div class="source-body">
+            <p class="source-meta">${esc(s.publisher)}．${esc(s.version)}</p>
+            ${s.quotes.map(q => `<blockquote>${esc(q)}</blockquote>`).join('')}
+            <details class="excerpt"><summary>查看完整段落</summary><p>${esc(s.excerpt)}</p></details>
+            <a class="source-link" href="${esc(s.url)}" target="_blank" rel="noopener noreferrer">開啟原文</a>
+          </div>
+        </details>`).join('')}
+    </section>`;
+}
+
+function renderResult(data, turn) {
+  if (data.status !== 'answered') {
+    return `<div class="notice" data-kind="${esc(data.status)}">${esc(data.message)}</div>`;
+  }
+  return `
+    <ol class="steps">
+      ${data.answer.map(step => `
+        <li>${esc(step.text)}
+          ${step.citations.map(n => `<button class="cite" type="button" data-target="src-${turn}-${n}" aria-label="查看來源 ${n}">${n}</button>`).join('')}
+        </li>`).join('')}
+    </ol>
+    ${renderSources(data.sources, turn)}`;
+}
+
+function setupAsk() {
+  const root = view.querySelector('.ask');
+  const thread = root.querySelector('.thread');
+  const form = root.querySelector('.composer');
+  const input = form.querySelector('textarea');
+  const send = form.querySelector('.btn-send');
+  let busy = false;
+  let turn = 0;
+
+  async function submit(question) {
+    if (busy || !question) return;
+    busy = true;
+    send.disabled = true;
+    root.querySelector('.samples')?.remove();
+    input.value = '';
+    turn += 1;
+
+    const item = document.createElement('article');
+    item.className = 'turn';
+    item.innerHTML = `<p class="turn-q">${esc(question)}</p><div class="turn-a"><p class="loading" role="status">正在查找資料<span></span></p></div>`;
+    thread.append(item);
+    item.scrollIntoView({ block: 'nearest' });
+    await answer(item.querySelector('.turn-a'), question, turn);
+
+    busy = false;
+    send.disabled = false;
+  }
+
+  async function answer(slot, question, currentTurn) {
+    try {
+      const res = await fetch('/api/ask', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ question }),
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error);
+      slot.innerHTML = renderResult(data, currentTurn);
+    } catch (error) {
+      slot.innerHTML = `
+        <div class="notice" data-kind="error">${esc(error.message && !(error instanceof TypeError) ? error.message : '無法連線到問答服務，請確認伺服器已啟動。')}
+          <button class="retry" type="button">再試一次</button>
+        </div>`;
+      slot.querySelector('.retry').addEventListener('click', () => {
+        slot.innerHTML = '<p class="loading" role="status">正在查找資料<span></span></p>';
+        answer(slot, question, currentTurn);
+      });
+    }
+  }
+
+  form.addEventListener('submit', event => {
+    event.preventDefault();
+    submit(input.value.trim());
+  });
+  // 注音選字時的 Enter 不送出
+  input.addEventListener('keydown', event => {
+    if (event.key === 'Enter' && !event.shiftKey && !event.isComposing) {
+      event.preventDefault();
+      form.requestSubmit();
+    }
+  });
+  root.addEventListener('click', event => {
+    if (event.target.matches('.sample')) submit(event.target.textContent);
+    if (event.target.matches('.cite')) {
+      const source = document.getElementById(event.target.dataset.target);
+      source.open = true;
+      source.scrollIntoView({ block: 'nearest', behavior: 'smooth' });
+    }
+  });
+
+  setupVoice(root, input);
+}
+
+function setupVoice(root, input) {
+  const Recognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+  if (!Recognition) return;
+  const mic = root.querySelector('.mic');
+  const note = root.querySelector('.voice-note');
+  mic.hidden = false;
+  const recognition = new Recognition();
+  recognition.lang = 'zh-TW';
+  let listening = false;
+  const setListening = state => {
+    listening = state;
+    mic.setAttribute('aria-pressed', state);
+    note.textContent = state ? '聆聽中，請說出問題…' : note.textContent;
+  };
+  mic.addEventListener('click', () => {
+    if (listening) return recognition.stop();
+    note.textContent = '';
+    recognition.start();
+    setListening(true);
+  });
+  recognition.onresult = event => {
+    input.value = event.results[0][0].transcript;
+    note.textContent = '已轉成文字，確認後按送出。';
+    input.focus();
+  };
+  recognition.onerror = event => {
+    note.textContent = event.error === 'not-allowed' ? '瀏覽器沒有麥克風權限，請改用打字。' : '沒有聽清楚，請再試一次或改用打字。';
+  };
+  recognition.onend = () => {
+    if (note.textContent === '聆聽中，請說出問題…') note.textContent = '';
+    setListening(false);
+  };
+}
+
+function closeMenus(except) {
+  view.querySelectorAll('.tile-wrap.open').forEach(wrap => {
+    if (wrap === except) return;
+    wrap.classList.remove('open');
+    wrap.querySelector('.tile').setAttribute('aria-expanded', 'false');
+    wrap.querySelector('.submenu').hidden = true;
+  });
+}
+
+document.addEventListener('click', event => {
+  const trigger = event.target.closest('button.tile');
+  if (!trigger) {
+    if (!event.target.closest('.submenu')) closeMenus();
+    return;
+  }
+  const wrap = trigger.parentElement;
+  closeMenus(wrap);
+  const open = wrap.classList.toggle('open');
+  trigger.setAttribute('aria-expanded', open);
+  wrap.querySelector('.submenu').hidden = !open;
+});
+
+document.addEventListener('keydown', event => {
+  if (event.key !== 'Escape') return;
+  const open = view.querySelector('.tile-wrap.open .tile');
+  closeMenus();
+  open?.focus();
+});
+
+function parseRoute() {
+  const [section = '', role, page] = location.hash.replace(/^#\/?/, '').split('/').map(decodeURIComponent);
+  if (section === 'roles') return { screen: 'roles' };
+  if (section === 'login' && ROLES[role]) return { screen: 'login', role };
+  if (section === 'app' && ROLES[role]) {
+    if (page && !findPage(role, page)) return { redirect: `#/app/${role}` };
+    return { screen: page ? 'page' : 'app', role, page };
+  }
+  return { screen: 'home' };
+}
+
+let firstRender = true;
+function render() {
+  const route = parseRoute();
+  if (route.redirect) return go(route.redirect);
+
+  // 回到身份選擇或首頁即視為登出
+  if (route.screen === 'roles' || route.screen === 'home') store.remove('sessionStorage', AUTH_KEY);
+
+  if ((route.screen === 'app' || route.screen === 'page') && store.get('sessionStorage', AUTH_KEY) !== route.role) {
+    return go(`#/login/${route.role}`);
+  }
+
+  document.body.dataset.screen = route.screen === 'page' ? 'app' : route.screen;
+  view.innerHTML = screens[route.screen](route.role, route.page);
+  if (route.screen === 'login') setupLogin(route.role);
+  if (route.page === 'ask') setupAsk();
+
+  const heading = view.querySelector('h1');
+  document.title = `${heading.textContent} | 長照服務平台`;
+  window.scrollTo(0, 0);
+  if (!firstRender) heading.focus({ preventScroll: true });
+  firstRender = false;
+}
+
+window.addEventListener('hashchange', render);
+render();
+</script>
+</body>
+</html>

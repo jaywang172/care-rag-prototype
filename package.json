@@ -1,0 +1,10 @@
+{
+  "name": "care-rag-prototype",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "start": "node --env-file=.env server.mjs",
+    "ingest": "node --env-file=.env scripts/ingest.mjs",
+    "eval": "node --env-file=.env scripts/eval.mjs"
+  }
+}
